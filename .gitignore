@@ -1,12 +1,19 @@
-# Ignore all files by default, but scan all directories.
-*
-!*/
-
-# Do not ignore git files in the root of the repo.
-!/.git*
-
-# Do not ignore current project's `.uproject`.
-!/*.uproject
+Build
+DerivedDataCache
+Intermediate
+Saved
+.vs
+.vscode
+*.VC.db
+*.opensdf
+*.opendb
+*.sdf
+*.sln
+*.suo
+*.xcodeproj
+*.xcworkspace
+Documentation
+.idea/
 
 # Do not ignore source, config and plugins dirs.
 !/Source/**
