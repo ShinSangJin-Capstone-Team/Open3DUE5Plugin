@@ -16,6 +16,6 @@
 /RawContent/**/* filter=lfs diff=lfs merge=lfs -text
 
 # Third party
-/Binaries/ThirdParty/Open3D/* filter=lfs diff=lfs merge=lfs -text
+/Binaries/ThirdParty/Open3D/bin/Open3D.dll filter=lfs diff=lfs merge=lfs -text
 /Source/ThirdParty/Open3D/lib/* filter=lfs diff=lfs merge=lfs -text
 /Source/ThirdParty/Open3D/bin/Open3D.dll filter=lfs diff=lfs merge=lfs -text
