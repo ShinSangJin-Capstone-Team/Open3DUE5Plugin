@@ -12,8 +12,19 @@ public class Open3D : ModuleRules
 
         if (Target.Platform == UnrealTargetPlatform.Win64)
 		{
-			// Add the import library
-			PublicAdditionalLibraries.Add(Path.Combine(ModuleDirectory, "lib", "Open3D.lib"));
+            // Add the import library
+            PublicAdditionalLibraries.AddRange(new string[] {
+                Path.Combine(ModuleDirectory, "lib", "glfw3.lib"),
+                Path.Combine(ModuleDirectory, "lib", "Open3D_3rdparty_glew.lib"),
+                Path.Combine(ModuleDirectory, "lib", "Open3D_3rdparty_liblzf.lib"),
+                Path.Combine(ModuleDirectory, "lib", "Open3D_3rdparty_qhull_r.lib"),
+                Path.Combine(ModuleDirectory, "lib", "Open3D_3rdparty_qhullcpp.lib"),
+                Path.Combine(ModuleDirectory, "lib", "Open3D_3rdparty_rply.lib"),
+                Path.Combine(ModuleDirectory, "lib", "Open3D_3rdparty_tinyfiledialogs.lib")
+                }
+            );
+
+            PublicAdditionalLibraries.Add(Path.Combine(ModuleDirectory, "lib", "Open3D.lib"));
 
             // Add any include paths for the plugin
             PublicIncludePaths.Add(Path.Combine(ModuleDirectory, "include"));

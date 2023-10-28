@@ -7,6 +7,7 @@
 #include "HAL/Platform.h"
 #include "Modules/ModuleManager.h"
 
+
 class OPEN3DUE5_API FOpen3DUE5Module : public IModuleInterface
 {
 public:

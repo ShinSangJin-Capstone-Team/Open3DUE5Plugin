@@ -558,6 +558,21 @@ public:
                                 bool linear_fit = false,
                                 int n_threads = -1);
 
+    static std::shared_ptr<TriangleMesh>
+    CreateFromPointCloudPoissonJustMesh(const PointCloud& pcd,
+        size_t depth = 8,
+        float width = 0.0f,
+        float scale = 1.1f,
+        bool linear_fit = false,
+        int n_threads = -1);
+
+    static std::shared_ptr<TriangleMesh>
+    CreateFromPointCloudWithoutNormals(
+        const PointCloud& pcd,
+        size_t orient_normals_k = 100,
+        size_t poisson_depth = 9
+    );
+
     /// Factory function to create a tetrahedron mesh (trianglemeshfactory.cpp).
     /// the mesh centroid will be at (0,0,0) and \p radius defines the
     /// distance from the center to the mesh vertices.
