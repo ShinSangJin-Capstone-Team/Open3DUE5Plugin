@@ -28,6 +28,7 @@ public class CS20 : ModuleRules
             PublicIncludePaths.Add(Path.Combine(ModuleDirectory, "include", "opencv2"));
 
             // Ensure that the DLL is staged along with the executable
+            /**/
             RuntimeDependencies.Add("$(PluginDir)/Binaries/ThirdParty/CS20/bin/csreconstruction.dll");
             RuntimeDependencies.Add("$(PluginDir)/Binaries/ThirdParty/CS20/bin/libsynexens3.dll");
             RuntimeDependencies.Add("$(PluginDir)/Binaries/ThirdParty/CS20/bin/opencv_calib3d440.dll");
@@ -54,6 +55,7 @@ public class CS20 : ModuleRules
             PublicDelayLoadDLLs.Add("opencv_videoio440.dll");
             PublicDelayLoadDLLs.Add("pthreadVC2.dll");
             PublicDelayLoadDLLs.Add("SonixCamera.dll");
+            //*/
         }
 		/**
         else if (Target.Platform == UnrealTargetPlatform.Mac)

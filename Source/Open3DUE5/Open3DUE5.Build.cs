@@ -28,6 +28,7 @@ public class Open3DUE5 : ModuleRules
 			{
 				"Core",
 				"Open3D",
+				"CS20",
 				"Projects"
 				// ... add other public dependencies that you statically link with here ...
 			}
