@@ -164,7 +164,7 @@ void FOpen3DUE5Module::StartupModule()
 	DLLHandles.Empty();
 	for (auto Path : DLLPaths)
 	{
-		auto LibraryPath = FPaths::Combine(*BaseDir, Path);
+		auto LibraryPath = FPaths::Combine(*BaseDir, *Path);
 		auto DLLHandle = !LibraryPath.IsEmpty() ? FPlatformProcess::GetDllHandle(*LibraryPath) : nullptr;
 		DLLHandles.Add(DLLHandle);
 	}
@@ -241,6 +241,8 @@ void FOpen3DUE5Module::VoxelizedArrFromPoints(TArray<FVector3f> InPoints, double
 
 void FOpen3DUE5Module::InitSensor()
 {
+	UE_LOG(LogTemp, Warning, TEXT("version: % s"), sy3::sy3_get_version(e));
+
 	printf("version:%s \n", sy3::sy3_get_version(e));
 	ctx = sy3::sy3_create_context(e);
 	sy3::device* dev = ctx->query_device(e);

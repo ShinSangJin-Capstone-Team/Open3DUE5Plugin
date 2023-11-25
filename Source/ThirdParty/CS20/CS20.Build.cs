@@ -30,7 +30,7 @@ public class CS20 : ModuleRules
             // Ensure that the DLL is staged along with the executable
             /**/
             RuntimeDependencies.Add("$(PluginDir)/Binaries/ThirdParty/CS20/bin/csreconstruction.dll");
-            RuntimeDependencies.Add("$(PluginDir)/Binaries/ThirdParty/CS20/bin/libsynexens3.dll");
+            //RuntimeDependencies.Add("$(PluginDir)/Binaries/ThirdParty/CS20/bin/libsynexens3.dll");
             RuntimeDependencies.Add("$(PluginDir)/Binaries/ThirdParty/CS20/bin/opencv_calib3d440.dll");
             RuntimeDependencies.Add("$(PluginDir)/Binaries/ThirdParty/CS20/bin/opencv_core440.dll");
             RuntimeDependencies.Add("$(PluginDir)/Binaries/ThirdParty/CS20/bin/opencv_features2d440.dll");
@@ -43,8 +43,8 @@ public class CS20 : ModuleRules
             RuntimeDependencies.Add("$(PluginDir)/Binaries/ThirdParty/CS20/bin/SonixCamera.dll");
 
             // Delay-load the DLL, so we can load it from the right place first
+            /**/
             PublicDelayLoadDLLs.Add("csreconstruction.dll");
-            PublicDelayLoadDLLs.Add("libsynexens3.dll");
             PublicDelayLoadDLLs.Add("opencv_calib3d440.dll");
             PublicDelayLoadDLLs.Add("opencv_features2d440.dll");
             PublicDelayLoadDLLs.Add("opencv_flann440.dll");
@@ -53,6 +53,7 @@ public class CS20 : ModuleRules
             PublicDelayLoadDLLs.Add("opencv_imgcodecs440.dll");
             PublicDelayLoadDLLs.Add("opencv_imgproc440.dll");
             PublicDelayLoadDLLs.Add("opencv_videoio440.dll");
+            //PublicDelayLoadDLLs.Add("libsynexens3.dll");
             PublicDelayLoadDLLs.Add("pthreadVC2.dll");
             PublicDelayLoadDLLs.Add("SonixCamera.dll");
             //*/
