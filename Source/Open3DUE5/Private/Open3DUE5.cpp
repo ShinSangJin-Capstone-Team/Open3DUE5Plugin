@@ -129,14 +129,14 @@ void print_device_info(sy3::device* dev)
 	printf("\nUsing device 0, an %s\n", sy3::sy3_get_device_info(dev, sy3::SY3_CAMERA_INFO_NAME, e));
 	printf("    Serial number: %s\n", sy3::sy3_get_device_info(dev, sy3::SY3_CAMERA_INFO_SERIAL_NUMBER, e));
 	printf("    Firmware version: %s\n\n", sy3::sy3_get_device_info(dev, sy3::SY3_CAMERA_INFO_FIRMWARE_VERSION, e));
-	UE_LOG(LogTemp, Warning, TEXT("\nUsing device 0, an %s\n"), sy3::sy3_get_device_info(dev, sy3::SY3_CAMERA_INFO_NAME, e));
-	UE_LOG(LogTemp, Warning, TEXT("    Serial number: %s\n"), sy3::sy3_get_device_info(dev, sy3::SY3_CAMERA_INFO_SERIAL_NUMBER, e));
-	UE_LOG(LogTemp, Warning, TEXT("    Firmware version: %s\n\n"), sy3::sy3_get_device_info(dev, sy3::SY3_CAMERA_INFO_FIRMWARE_VERSION, e));
+	UE_LOG(LogTemp, Warning, TEXT("\nUsing device 0, an %s\n"), *FString(sy3::sy3_get_device_info(dev, sy3::SY3_CAMERA_INFO_NAME, e)));
+	UE_LOG(LogTemp, Warning, TEXT("    Serial number: %s\n"), *FString(sy3::sy3_get_device_info(dev, sy3::SY3_CAMERA_INFO_SERIAL_NUMBER, e)));
+	UE_LOG(LogTemp, Warning, TEXT("    Firmware version: %s\n\n"), *FString(sy3::sy3_get_device_info(dev, sy3::SY3_CAMERA_INFO_FIRMWARE_VERSION, e)));
 }
 
 void print_support_format(sy3::device* dev, sy3::sy3_error& e)
 {
-
+	/**
 	std::vector<sy3::sy3_stream> support_stream = dev->get_support_stream(e);
 	for (int i = 0; i < support_stream.size(); i++)
 	{
@@ -149,6 +149,7 @@ void print_support_format(sy3::device* dev, sy3::sy3_error& e)
 			printf("\t\t support format:%d x %d \n", support_format[j].width, support_format[j].height);
 		}
 	}
+	//*/
 }
 
 void FOpen3DUE5Module::StartupModule()
@@ -241,14 +242,14 @@ void FOpen3DUE5Module::VoxelizedArrFromPoints(TArray<FVector3f> InPoints, double
 
 void FOpen3DUE5Module::InitSensor()
 {
-	UE_LOG(LogTemp, Warning, TEXT("version: % s"), sy3::sy3_get_version(e));
+	UE_LOG(LogTemp, Warning, TEXT("version: % s"), *FString(sy3::sy3_get_version(e)));
 
 	printf("version:%s \n", sy3::sy3_get_version(e));
 	ctx = sy3::sy3_create_context(e);
 	sy3::device* dev = ctx->query_device(e);
 
 	if (e != sy3::sy3_error::SUCCESS) {
-		UE_LOG(LogTemp, Warning, TEXT("error: %d %s \n"), e, sy3::sy3_error_to_string(e));
+		UE_LOG(LogTemp, Warning, TEXT("error: %d %s \n"), e, *FString(sy3::sy3_error_to_string(e)));
 		printf("error:%d  %s \n", e, sy3::sy3_error_to_string(e));
 		return;
 	}
@@ -275,7 +276,7 @@ void FOpen3DUE5Module::GetSensorOneFrame(TArray<FVector>& Points)
 			sy3::device* dev = ctx->query_device(e);
 
 			if (e != sy3::sy3_error::SUCCESS) {
-				UE_LOG(LogTemp, Warning, TEXT("error: %d %s \n"), e, sy3::sy3_error_to_string(e));
+				UE_LOG(LogTemp, Warning, TEXT("error: %d %s \n"), e, *FString(sy3::sy3_error_to_string(e)));
 				printf("error:%d  %s \n", e, sy3::sy3_error_to_string(e));
 				Points.Empty();
 				Points.Add(FVector(-1.0, -1.0, -1.0));

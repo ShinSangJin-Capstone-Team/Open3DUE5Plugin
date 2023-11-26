@@ -34,17 +34,17 @@ private:
 	{
 		"Binaries/ThirdParty/Open3D/bin/Open3D.dll",
 		"Binaries/ThirdParty/CS20/bin/opencv_core440.dll",
-		"Binaries/ThirdParty/CS20/bin/opencv_features2d440.dll",
+	    "Binaries/ThirdParty/CS20/bin/opencv_imgproc440.dll",
 		"Binaries/ThirdParty/CS20/bin/opencv_flann440.dll",
-		"Binaries/ThirdParty/CS20/bin/opencv_highgui440.dll",
+		"Binaries/ThirdParty/CS20/bin/opencv_features2d440.dll",
 		"Binaries/ThirdParty/CS20/bin/opencv_imgcodecs440.dll",
-		"Binaries/ThirdParty/CS20/bin/opencv_imgproc440.dll",
 		"Binaries/ThirdParty/CS20/bin/opencv_videoio440.dll",
-		"Binaries/ThirdParty/CS20/bin/csreconstruction.dll",
-		//"Binaries/ThirdParty/CS20/bin/libsynexens3.dll",
+		"Binaries/ThirdParty/CS20/bin/opencv_highgui440.dll",
 		"Binaries/ThirdParty/CS20/bin/opencv_calib3d440.dll",
+		"Binaries/ThirdParty/CS20/bin/csreconstruction.dll",
 		"Binaries/ThirdParty/CS20/bin/pthreadVC2.dll",
-		"Binaries/ThirdParty/CS20/bin/SonixCamera.dll"
+		"Binaries/ThirdParty/CS20/bin/SonixCamera.dll",
+		"Binaries/ThirdParty/CS20/bin/libsynexens3.dll",
 	};
 
 	/** Handle to the dll we will load */
