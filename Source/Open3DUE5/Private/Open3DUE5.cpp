@@ -61,6 +61,14 @@ THIRD_PARTY_INCLUDES_END
 #define TOF_WINDOW_NAME "TOF"
 
 #pragma region OldCS20SDK
+
+namespace CS20Things
+{
+	sy3::context* ctx;
+	sy3::pipeline* pline;
+	sy3::sy3_error e;
+}
+
 void Render(sy3::depth_frame* piexls_depth, sy3::frame* piexls_rgb, int width, int height)
 {
 	std::cout << width << std::endl;
@@ -217,19 +225,18 @@ void FOpen3DUE5Module::VoxelizedArrFromPoints(TArray<FVector3f> InPoints, double
 		//auto VoxelList = new std::vector<open3d::geometry::Voxel>(Open3DVoxelizedGrid->GetVoxels());
 
 		auto RealSizeEigen = Open3DVoxelizedGrid->GetAxisAlignedBoundingBox().GetExtent();
-		const FVector RealSizeFloat = FVector(RealSizeEigen.x(), RealSizeEigen.y(), RealSizeEigen.z());
 		const FIntVector RealSize(
 			FIntVector(
-				FMath::CeilToInt(RealSizeFloat.X),
-				FMath::CeilToInt(RealSizeFloat.Y),
-				FMath::CeilToInt(RealSizeFloat.Z)
+				FMath::CeilToInt(RealSizeEigen.x()),
+				FMath::CeilToInt(RealSizeEigen.y()),
+				FMath::CeilToInt(RealSizeEigen.z())
 			)
 		);
 
-		OutVoxelizedArr.RemoveAll([](FIntVector Vector) { return true; });
+		OutVoxelizedArr.Empty();
 
 		// because of the above issue, access voxels_ directly instead of getting it as an std::vector through a copy constructor 
-		for (auto AVoxel : Open3DVoxelizedGrid->voxels_)
+		for (auto& AVoxel : Open3DVoxelizedGrid->voxels_)
 		{
 			int XCoord = AVoxel.second.grid_index_.x();
 			int YCoord = AVoxel.second.grid_index_.y();
@@ -245,62 +252,62 @@ void FOpen3DUE5Module::VoxelizedArrFromPoints(TArray<FVector3f> InPoints, double
 
 void FOpen3DUE5Module::InitSensor()
 {
-	UE_LOG(LogTemp, Warning, TEXT("version: % s"), *FString(sy3::sy3_get_version(e)));
+	UE_LOG(LogTemp, Warning, TEXT("version: % s"), *FString(sy3::sy3_get_version(CS20Things::e)));
 
-	printf("version:%s \n", sy3::sy3_get_version(e));
-	ctx = sy3::sy3_create_context(e);
-	sy3::device* dev = ctx->query_device(e);
+	printf("version:%s \n", sy3::sy3_get_version(CS20Things::e));
+	CS20Things::ctx =sy3::sy3_create_context(CS20Things::e);
+	sy3::device* dev = CS20Things::ctx->query_device(CS20Things::e);
 
-	if (e != sy3::sy3_error::SUCCESS) {
-		UE_LOG(LogTemp, Warning, TEXT("error: %d %s \n"), e, *FString(sy3::sy3_error_to_string(e)));
-		printf("error:%d  %s \n", e, sy3::sy3_error_to_string(e));
+	if (CS20Things::e != sy3::sy3_error::SUCCESS) {
+		UE_LOG(LogTemp, Warning, TEXT("error: %d %s \n"), CS20Things::e, *FString(sy3::sy3_error_to_string(CS20Things::e)));
+		printf("error:%d  %s \n", CS20Things::e, sy3::sy3_error_to_string(CS20Things::e));
 		return;
 	}
 
-	print_support_format(dev, e);
+	print_support_format(dev, CS20Things::e);
 	print_device_info(dev);
 
-	pline = sy3::sy3_create_pipeline(ctx, e);
+	CS20Things::pline = sy3::sy3_create_pipeline(CS20Things::ctx, CS20Things::e);
 
-	sy3::config* cfg = sy3_create_config(ctx, e);
-	cfg->enable_stream(sy3::sy3_stream::SY3_STREAM_DEPTH, DEPTH_WIDTH, DEPTH_HEIGHT, e);
-	cfg->enable_stream(sy3::sy3_stream::SY3_STREAM_RGB, RGB_WIDTH, RGB_HEIGHT, e);
+	sy3::config* cfg = sy3_create_config(CS20Things::ctx, CS20Things::e);
+	cfg->enable_stream(sy3::sy3_stream::SY3_STREAM_DEPTH, DEPTH_WIDTH, DEPTH_HEIGHT, CS20Things::e);
+	cfg->enable_stream(sy3::sy3_stream::SY3_STREAM_RGB, RGB_WIDTH, RGB_HEIGHT, CS20Things::e);
 
-	pline->start(cfg, e);
+	CS20Things::pline->start(cfg, CS20Things::e);
 }
 
 void FOpen3DUE5Module::GetSensorOneFrame(TArray<FVector>& Points)
 {
-	if (!pline)
+	if (!CS20Things::pline)
 	{
-		if (!ctx)
+		if (!CS20Things::ctx)
 		{
-			ctx = sy3::sy3_create_context(e);
-			sy3::device* dev = ctx->query_device(e);
+			CS20Things::ctx = sy3::sy3_create_context(CS20Things::e);
+			sy3::device* dev = CS20Things::ctx->query_device(CS20Things::e);
 
-			if (e != sy3::sy3_error::SUCCESS) {
-				UE_LOG(LogTemp, Warning, TEXT("error: %d %s \n"), e, *FString(sy3::sy3_error_to_string(e)));
-				printf("error:%d  %s \n", e, sy3::sy3_error_to_string(e));
+			if (CS20Things::e != sy3::sy3_error::SUCCESS) {
+				UE_LOG(LogTemp, Warning, TEXT("error: %d %s \n"), CS20Things::e, *FString(sy3::sy3_error_to_string(CS20Things::e)));
+				printf("error:%d  %s \n", CS20Things::e, sy3::sy3_error_to_string(CS20Things::e));
 				Points.Empty();
 				Points.Add(FVector(-1.0, -1.0, -1.0));
 				return;
 			}
 
-			print_support_format(dev, e);
+			print_support_format(dev, CS20Things::e);
 			print_device_info(dev);
 		}
 
-		pline = sy3::sy3_create_pipeline(ctx, e);
+		CS20Things::pline = sy3::sy3_create_pipeline(CS20Things::ctx, CS20Things::e);
 
-		sy3::config* cfg = sy3_create_config(ctx, e);
-		cfg->enable_stream(sy3::sy3_stream::SY3_STREAM_DEPTH, DEPTH_WIDTH, DEPTH_HEIGHT, e);
-		cfg->enable_stream(sy3::sy3_stream::SY3_STREAM_RGB, RGB_WIDTH, RGB_HEIGHT, e);
+		sy3::config* cfg = sy3_create_config(CS20Things::ctx, CS20Things::e);
+		cfg->enable_stream(sy3::sy3_stream::SY3_STREAM_DEPTH, DEPTH_WIDTH, DEPTH_HEIGHT, CS20Things::e);
+		cfg->enable_stream(sy3::sy3_stream::SY3_STREAM_RGB, RGB_WIDTH, RGB_HEIGHT, CS20Things::e);
 
-		pline->start(cfg, e);
+		CS20Things::pline->start(cfg, CS20Things::e);
 	}
 	Points.Empty();
 
-	sy3::frameset* frameset = pline->wait_for_frames(SY3_DEFAULT_TIMEOUT, e);
+	sy3::frameset* frameset = CS20Things::pline->wait_for_frames(SY3_DEFAULT_TIMEOUT, CS20Things::e);
 	sy3::depth_frame* depth_frame = frameset->get_depth_frame();
 	//sy3::rgb_frame* rgb_frame = frameset->get_rgb_frame();
 
@@ -324,7 +331,7 @@ void FOpen3DUE5Module::GetSensorOneFrame(TArray<FVector>& Points)
 			int width = set->get_depth_frame()->get_width();
 			UE_LOG(LogTemp, Warning, TEXT("Height: %d, Width: %d"), height, width);
 			sy3::sy3_error e1;
-			sy3::points* points = pline->get_process_engin(e1)->comptute_points(depth_frame, true, e1);
+			sy3::points* points = CS20Things::pline->get_process_engin(e1)->comptute_points(depth_frame, true, e1);
 			float* data = points->get_points();
 			std::cout << points->get_length() << std::endl;
 			/**/

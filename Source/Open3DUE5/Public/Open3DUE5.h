@@ -7,13 +7,6 @@
 #include "HAL/Platform.h"
 #include "Modules/ModuleManager.h"
 
-namespace sy3
-{
-	class context;
-	class pipeline;
-	enum sy3_error;
-}
-
 class OPEN3DUE5_API FOpen3DUE5Module : public IModuleInterface
 {
 public:
@@ -49,8 +42,4 @@ private:
 
 	/** Handle to the dll we will load */
 	//void* Open3DHandle;
-
-	sy3::context* ctx = nullptr;
-	sy3::pipeline* pline = nullptr;
-	sy3::sy3_error e;
 };
