@@ -42,7 +42,6 @@ THIRD_PARTY_INCLUDES_END
 #endif
 #define no_init_all_deprecated
 
-
 #define RAW_WIDTH 1280
 #define RAW_HEIGHT 960
 
@@ -61,6 +60,7 @@ THIRD_PARTY_INCLUDES_END
 #define RGB_WINDOW_NAME "RGB"
 #define TOF_WINDOW_NAME "TOF"
 
+#pragma region OldCS20SDK
 void Render(sy3::depth_frame* piexls_depth, sy3::frame* piexls_rgb, int width, int height)
 {
 	std::cout << width << std::endl;
@@ -151,7 +151,9 @@ void print_support_format(sy3::device* dev, sy3::sy3_error& e)
 	}
 	//*/
 }
+#pragma endregion
 
+#pragma region VoxelModuleSections
 void FOpen3DUE5Module::StartupModule()
 {
 	// This code will execute after your module is loaded into memory; the exact timing is specified in the .uplugin file per-module
@@ -239,6 +241,7 @@ void FOpen3DUE5Module::VoxelizedArrFromPoints(TArray<FVector3f> InPoints, double
 		CalcedRealSize = RealSize;
 	}
 }
+#pragma endregion
 
 void FOpen3DUE5Module::InitSensor()
 {
@@ -295,59 +298,56 @@ void FOpen3DUE5Module::GetSensorOneFrame(TArray<FVector>& Points)
 
 		pline->start(cfg, e);
 	}
-	else
+	Points.Empty();
+
+	sy3::frameset* frameset = pline->wait_for_frames(SY3_DEFAULT_TIMEOUT, e);
+	sy3::depth_frame* depth_frame = frameset->get_depth_frame();
+	//sy3::rgb_frame* rgb_frame = frameset->get_rgb_frame();
+
+	if (depth_frame)// && rgb_frame)
 	{
-		Points.Empty();
+		/*sy3::sy3_intrinsics intrinsics_tof = depth_frame->get_profile()->get_intrinsics();
+		printf("depth intrinsics: %d x %d  %f %f\n", intrinsics_tof.width, intrinsics_tof.height, intrinsics_tof.fx, intrinsics_tof.fy);
+		sy3::sy3_intrinsics intrinsics_rgb = rgb_frame->get_profile()->get_intrinsics();
+		printf("rgb intrinsics: %d x %d  %f %f\n", intrinsics_rgb.width, intrinsics_rgb.height, intrinsics_rgb.fx, intrinsics_rgb.fy);
 
-		sy3::frameset* frameset = pline->wait_for_frames(SY3_DEFAULT_TIMEOUT, e);
-		sy3::depth_frame* depth_frame = frameset->get_depth_frame();
-		//sy3::rgb_frame* rgb_frame = frameset->get_rgb_frame();
+		show_depth_frame(depth_frame, "depth");*/
 
-		if (depth_frame)// && rgb_frame)
-		{
-			/*sy3::sy3_intrinsics intrinsics_tof = depth_frame->get_profile()->get_intrinsics();
-			printf("depth intrinsics: %d x %d  %f %f\n", intrinsics_tof.width, intrinsics_tof.height, intrinsics_tof.fx, intrinsics_tof.fy);
-			sy3::sy3_intrinsics intrinsics_rgb = rgb_frame->get_profile()->get_intrinsics();
-			printf("rgb intrinsics: %d x %d  %f %f\n", intrinsics_rgb.width, intrinsics_rgb.height, intrinsics_rgb.fx, intrinsics_rgb.fy);
+		if (depth_frame->get_width() == 640) {
 
-			show_depth_frame(depth_frame, "depth");*/
+			int align_width = 640;
+			int align_height = 480;
+			sy3::frameset* set = frameset;//pline->get_process_engin(e)->align_to_rgb(depth_frame, rgb_frame, align_width, align_height, e);
+			//show_depth_frame(set->get_depth_frame(), "algin_depth");
 
-			if (depth_frame->get_width() == 640) {
-
-				int align_width = 640;
-				int align_height = 480;
-				sy3::frameset* set = frameset;//pline->get_process_engin(e)->align_to_rgb(depth_frame, rgb_frame, align_width, align_height, e);
-				//show_depth_frame(set->get_depth_frame(), "algin_depth");
-
-				int height = set->get_depth_frame()->get_height();
-				int width = set->get_depth_frame()->get_width();
-				UE_LOG(LogTemp, Warning, TEXT("Height: %d, Width: %d"), height, width);
-				sy3::sy3_error e1;
-				sy3::points* points = pline->get_process_engin(e1)->comptute_points(depth_frame, true, e1);
-				float* data = points->get_points();
-				std::cout << points->get_length() << std::endl;
-				/**/
-				for (auto i = 0; i < height; i++)
+			int height = set->get_depth_frame()->get_height();
+			int width = set->get_depth_frame()->get_width();
+			UE_LOG(LogTemp, Warning, TEXT("Height: %d, Width: %d"), height, width);
+			sy3::sy3_error e1;
+			sy3::points* points = pline->get_process_engin(e1)->comptute_points(depth_frame, true, e1);
+			float* data = points->get_points();
+			std::cout << points->get_length() << std::endl;
+			/**/
+			for (auto i = 0; i < height; i++)
+			{
+				for (auto j = 0; j < width; j++)
 				{
-					for (auto j = 0; j < width; j++)
+					if (data[(3 * width) * i + 3 * j + 2] > 0)
 					{
-						if (data[(3 * width) * i + 3 * j + 2] > 0)
-						{
-							Points.Add(FVector(
-								data[(3 * width) * i + 3 * j + 0],
-								data[(3 * width) * i + 3 * j + 1],
-								data[(3 * width) * i + 3 * j + 2]
-							));
-						}
-						//printf("%4d ", (int)data[i * (3 * width) + j * (3) + 2]);
+						Points.Add(FVector(
+							data[(3 * width) * i + 3 * j + 0],
+							data[(3 * width) * i + 3 * j + 1],
+							data[(3 * width) * i + 3 * j + 2]
+						));
 					}
+					//printf("%4d ", (int)data[i * (3 * width) + j * (3) + 2]);
 				}
-				delete points;
 			}
+			delete points;
 		}
-
-		delete frameset;
 	}
+
+	delete frameset;
 }
 
 #undef LOCTEXT_NAMESPACE

@@ -13,7 +13,6 @@ public class CS20 : ModuleRules
         if (Target.Platform == UnrealTargetPlatform.Win64)
 		{
 			// Add the import library
-			PublicAdditionalLibraries.Add(Path.Combine(ModuleDirectory, "lib", "libsynexens3.lib"));
             PublicAdditionalLibraries.Add(Path.Combine(ModuleDirectory, "lib", "shared", "opencv_calib3d440.lib"));
             PublicAdditionalLibraries.Add(Path.Combine(ModuleDirectory, "lib", "shared", "opencv_core440.lib"));
             PublicAdditionalLibraries.Add(Path.Combine(ModuleDirectory, "lib", "shared", "opencv_features2d440.lib"));
@@ -22,6 +21,7 @@ public class CS20 : ModuleRules
             PublicAdditionalLibraries.Add(Path.Combine(ModuleDirectory, "lib", "shared", "opencv_imgcodecs440.lib"));
             PublicAdditionalLibraries.Add(Path.Combine(ModuleDirectory, "lib", "shared", "opencv_imgproc440.lib"));
             PublicAdditionalLibraries.Add(Path.Combine(ModuleDirectory, "lib", "shared", "opencv_videoio440.lib"));
+            PublicAdditionalLibraries.Add(Path.Combine(ModuleDirectory, "lib", "libsynexens3.lib"));
 
             // Add any include paths for the plugin
             PublicIncludePaths.Add(Path.Combine(ModuleDirectory, "include"));
