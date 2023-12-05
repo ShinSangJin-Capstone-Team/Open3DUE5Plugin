@@ -15,6 +15,7 @@
 #include <iostream>
 #include <vector>
 #include <memory>
+#include <tchar.h>
 
 /**/
 #if PLATFORM_WINDOWS
@@ -29,6 +30,8 @@ THIRD_PARTY_INCLUDES_START
 #include "libsynexens3/libsynexens3.h"
 #include "opencv.hpp"
 #include "imgproc/imgproc.hpp"
+#include "HPS3D160_IF/HPS3DUser_IF.h"
+#include "HPS3D160_IF/HPS3DUser_IF.c"
 #pragma pop_macro("check")  // restore definition
 THIRD_PARTY_INCLUDES_END
 
@@ -60,6 +63,13 @@ THIRD_PARTY_INCLUDES_END
 #define RGBD_WINDOW_NAME "RGBD"
 #define RGB_WINDOW_NAME "RGB"
 #define TOF_WINDOW_NAME "TOF"
+
+//HPS3D start
+
+//preallocate memory
+static HPS3D_MeasureData_t g_measureData;
+
+
 
 void Render(sy3::depth_frame* piexls_depth, sy3::frame* piexls_rgb, int width, int height)
 {
@@ -151,6 +161,32 @@ void print_support_format(sy3::device* dev, sy3::sy3_error& e)
 	}
 }
 
+static void EventCallBackFunc(int handle, int eventType, uint8_t* data, int dataLen, void* userPara)
+{
+	switch ((HPS3D_EventType_t)eventType)
+	{
+		//Measurement data notification event
+	case HPS3D_SIMPLE_ROI_EVEN:
+	case HPS3D_FULL_ROI_EVEN:
+	case HPS3D_FULL_DEPTH_EVEN:
+	case HPS3D_SIMPLE_DEPTH_EVEN:
+		HPS3D_ConvertToMeasureData(data, &g_measureData, (HPS3D_EventType_t)eventType);
+		//PrintResultData((HPS3D_EventType_t)eventType, g_measureData);
+		break;
+	case HPS3D_SYS_EXCEPTION_EVEN: /*System anomaly notification event*/
+		printf("SYS ERR :%s\n", data);
+		break;
+	case HPS3D_DISCONNECT_EVEN: /*Connection abnormal disconnection notification event*/
+		printf("Device disconnected!\n");
+		HPS3D_CloseDevice(handle);
+		HPS3D_MeasureDataFree(&g_measureData);
+		break;
+	case HPS3D_NULL_EVEN:  //Empty event notification
+	default:
+		break;
+	}
+}
+
 void FOpen3DUE5Module::StartupModule()
 {
 	// This code will execute after your module is loaded into memory; the exact timing is specified in the .uplugin file per-module
@@ -239,6 +275,7 @@ void FOpen3DUE5Module::VoxelizedArrFromPoints(TArray<FVector3f> InPoints, double
 	}
 }
 
+/*
 void FOpen3DUE5Module::InitSensor()
 {
 	printf("version:%s \n", sy3::sy3_get_version(e));
@@ -302,12 +339,7 @@ void FOpen3DUE5Module::GetSensorOneFrame(TArray<FVector>& Points)
 
 		if (depth_frame)// && rgb_frame)
 		{
-			/*sy3::sy3_intrinsics intrinsics_tof = depth_frame->get_profile()->get_intrinsics();
-			printf("depth intrinsics: %d x %d  %f %f\n", intrinsics_tof.width, intrinsics_tof.height, intrinsics_tof.fx, intrinsics_tof.fy);
-			sy3::sy3_intrinsics intrinsics_rgb = rgb_frame->get_profile()->get_intrinsics();
-			printf("rgb intrinsics: %d x %d  %f %f\n", intrinsics_rgb.width, intrinsics_rgb.height, intrinsics_rgb.fx, intrinsics_rgb.fy);
 
-			show_depth_frame(depth_frame, "depth");*/
 
 			if (depth_frame->get_width() == 640) {
 
@@ -323,7 +355,7 @@ void FOpen3DUE5Module::GetSensorOneFrame(TArray<FVector>& Points)
 				sy3::points* points = pline->get_process_engin(e1)->comptute_points(depth_frame, true, e1);
 				float* data = points->get_points();
 				std::cout << points->get_length() << std::endl;
-				/**/
+
 				for (auto i = 0; i < height; i++)
 				{
 					for (auto j = 0; j < width; j++)
@@ -345,6 +377,110 @@ void FOpen3DUE5Module::GetSensorOneFrame(TArray<FVector>& Points)
 
 		delete frameset;
 	}
+}
+*/
+
+void FOpen3DUE5Module::InitSensor()
+{
+	
+}
+
+void FOpen3DUE5Module::GetSensorOneFrame(TArray<FVector>& Points)
+{
+	printf("HPS3D160 C/C++ Demo (Visual Statudio 2019)\n\n");
+	//printf("SDK Ver:%s\n", HPS3D_GetSDKVersion());
+
+	//Memroy allocation
+	HPS3D_MeasureDataInit(&g_measureData);
+	int handl = -1;
+	HPS3D_StatusTypeDef ret = HPS3D_RET_OK;
+
+	printf("Device Type Selection: HPS3D160-U(1)  HPS3D160-L(2)  Exit(Other)\n");
+	char sel = getchar();
+	getchar(); //Filter Carriage Return
+	if (sel == '1')
+	{
+		//if you have problem with connection this may be the problem
+		ret = HPS3D_USBConnectDevice((char*)_T("COM6"), &handl);
+		//printf("%d\n", handle);
+	}
+	else
+	{
+		return;
+	}
+	if (ret != HPS3D_RET_OK)
+	{
+		printf("Device connection failed here,Err:%d\n", ret);
+		return;
+	}
+	//Register event callback function for receiving continuous data packets and handling exceptions
+	HPS3D_RegisterEventCallback(EventCallBackFunc, NULL);
+	printf("Device version:%s\n", HPS3D_GetDeviceVersion(handl));
+	printf("Device serial number:%s\n\n", HPS3D_GetSerialNumber(handl));
+	HPS3D_DeviceSettings_t settings;
+	ret = HPS3D_ExportSettings(handl, &settings);
+	if (ret != HPS3D_RET_OK)
+	{
+		printf("Failed to export device parameters,Err:%d\n", ret);
+		return;
+	}
+	printf("Resolution:%d X %d\n", settings.max_resolution_X, settings.max_resolution_Y);
+	printf("Optical path compensation turned on: %d\n\n", settings.optical_path_calibration);
+	bool isContinuous = false;
+
+	Points.Empty();
+	//printf("Select measurement mode: Single measurement(1) Continuous measurement(2) Exit(Other)\n");
+	char se = '1';
+	//getchar(); //Filter Carriage Return
+	if (se == '1')
+	{
+		//Single measurement mode
+		HPS3D_EventType_t type = HPS3D_NULL_EVEN;
+		printf("%d\n", handl);
+		ret = HPS3D_SingleCapture(handl, &type, &g_measureData);
+		if (ret != HPS3D_RET_OK)
+		{
+			printf("Single measurement failed,Err:%d\n", ret);
+			return;
+		}
+		//PrintResultData(type, g_measureData);
+		for (auto i = 0; i < 60; i++)
+		{
+			for (auto j = 0; j < 160; j++)
+			{
+				if (g_measureData.full_depth_data.point_cloud_data.point_data[160 * i + j].z > 0)
+				{
+					Points.Add(FVector(
+						g_measureData.full_depth_data.point_cloud_data.point_data[160 * i + j].x,
+						g_measureData.full_depth_data.point_cloud_data.point_data[160 * i + j].y,
+						g_measureData.full_depth_data.point_cloud_data.point_data[160 * i + j].z
+					));
+					
+				}
+				//printf("%1d", (int)data.full_depth_data.point_cloud_data.point_data[i*160 + j].z/1000);
+			}
+		}
+		UE_LOG(LogTemp, Warning, TEXT("%2d "), g_measureData.full_depth_data.point_cloud_data.point_data[400].z);
+		UE_LOG(LogTemp, Warning, TEXT("%2d "), g_measureData.full_depth_data.point_cloud_data.point_data[500].z);
+	}
+	else
+	{
+		isContinuous = false;
+		return;
+	}
+
+if (isContinuous)
+{
+	while (1)
+	{
+		Sleep(10);
+	}
+}
+
+HPS3D_StopCapture(handl);
+HPS3D_CloseDevice(handl);
+HPS3D_MeasureDataFree(&g_measureData);
+system("pause");
 }
 
 #undef LOCTEXT_NAMESPACE

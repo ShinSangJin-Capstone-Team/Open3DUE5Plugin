@@ -27,6 +27,9 @@ public:
 	void InitSensor();
 	void GetSensorOneFrame(TArray<FVector>& Points);
 
+	//void InitSensorHPS3D();
+	//void GetSensorOneFrameHPS3D(TArray<FVector>& Points);
+
 private:
 	TArray<void*> DLLHandles = {};
 
