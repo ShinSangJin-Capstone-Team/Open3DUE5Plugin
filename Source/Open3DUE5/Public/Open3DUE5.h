@@ -24,11 +24,12 @@ public:
 
 	static void VoxelizedArrFromPoints(TArray<FVector3f> InPoints, double VoxelSize, TArray<FIntVector>& OutVoxelizedArr, FIntVector& CalcedRealSize);
 
+	void CleanUpSensorHPS();
 	void InitSensor();
 	void GetSensorOneFrame(TArray<FVector>& Points);
 
-	//void InitSensorHPS3D();
-	//void GetSensorOneFrameHPS3D(TArray<FVector>& Points);
+	void InitSensorCS20();
+	void GetSensorOneFrameCS20(TArray<FVector>& Points);
 
 private:
 	TArray<void*> DLLHandles = {};
@@ -47,7 +48,8 @@ private:
 		"Binaries/ThirdParty/CS20/bin/opencv_imgproc440.dll",
 		"Binaries/ThirdParty/CS20/bin/opencv_videoio440.dll",
 		"Binaries/ThirdParty/CS20/bin/pthreadVC2.dll",
-		"Binaries/ThirdParty/CS20/bin/SonixCamera.dll"
+		"Binaries/ThirdParty/CS20/bin/SonixCamera.dll",
+		"Binaries/ThirdParty/HPS3D/bin/HPS3D160_SDK.dll"
 	};
 
 	/** Handle to the dll we will load */

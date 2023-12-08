@@ -220,7 +220,7 @@ int HPS3D_ConvertToMeasureData(__OUT uint8_t *data, __IN HPS3D_MeasureData_t *re
 
 			int pixNum = resultData->full_roi_data[i].pixel_number;
 			int j = 0;
-			for (j = 0; j < resultData->full_roi_data[i].pixel_number; j++)
+			for (j = 0; j < pixNum; j++)
 			{
 				resultData->full_roi_data[i].distance[j] = data[len++] << 8;
 				resultData->full_roi_data[i].distance[j] += data[len++];
