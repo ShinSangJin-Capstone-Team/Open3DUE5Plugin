@@ -12,7 +12,7 @@ namespace sy3
 	class context;
 	class pipeline;
 	enum sy3_error;
-}
+};
 
 class OPEN3DUE5_API FOpen3DUE5Module : public IModuleInterface
 {
@@ -27,8 +27,8 @@ public:
 	void InitSensor();
 	void GetSensorOneFrame(TArray<FVector>& Points);
 
-	//void InitSensorHPS3D();
-	//void GetSensorOneFrameHPS3D(TArray<FVector>& Points);
+	void InitSensorCS20();
+	void GetSensorOneFrameCS20(TArray<FVector>& Points);
 
 private:
 	TArray<void*> DLLHandles = {};
@@ -57,4 +57,6 @@ private:
 	sy3::context* ctx = nullptr;
 	sy3::pipeline* pline = nullptr;
 	sy3::sy3_error e;
+
+	int handle;
 };
