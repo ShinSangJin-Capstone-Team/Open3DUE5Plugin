@@ -382,7 +382,7 @@ void FOpen3DUE5Module::GetSensorOneFrame(TArray<FVector>& Points)
 
 void FOpen3DUE5Module::InitSensor()
 {
-	
+	return;
 }
 
 void FOpen3DUE5Module::GetSensorOneFrame(TArray<FVector>& Points)
@@ -392,22 +392,15 @@ void FOpen3DUE5Module::GetSensorOneFrame(TArray<FVector>& Points)
 
 	//Memroy allocation
 	HPS3D_MeasureDataInit(&g_measureData);
-	int handl = -1;
+	int handle = -1;
 	HPS3D_StatusTypeDef ret = HPS3D_RET_OK;
 
 	printf("Device Type Selection: HPS3D160-U(1)  HPS3D160-L(2)  Exit(Other)\n");
-	char sel = getchar();
-	getchar(); //Filter Carriage Return
-	if (sel == '1')
-	{
-		//if you have problem with connection this may be the problem
-		ret = HPS3D_USBConnectDevice((char*)_T("COM6"), &handl);
-		//printf("%d\n", handle);
-	}
-	else
-	{
-		return;
-	}
+
+	//if you have problem with connection this may be the problem
+	ret = HPS3D_USBConnectDevice((char*)_T("COM3"), &handle);
+	//printf("%d\n", handle);
+
 	if (ret != HPS3D_RET_OK)
 	{
 		printf("Device connection failed here,Err:%d\n", ret);
@@ -415,18 +408,17 @@ void FOpen3DUE5Module::GetSensorOneFrame(TArray<FVector>& Points)
 	}
 	//Register event callback function for receiving continuous data packets and handling exceptions
 	HPS3D_RegisterEventCallback(EventCallBackFunc, NULL);
-	printf("Device version:%s\n", HPS3D_GetDeviceVersion(handl));
-	printf("Device serial number:%s\n\n", HPS3D_GetSerialNumber(handl));
+	printf("Device version:%s\n", HPS3D_GetDeviceVersion(handle));
+	printf("Device serial number:%s\n\n", HPS3D_GetSerialNumber(handle));
 	HPS3D_DeviceSettings_t settings;
-	ret = HPS3D_ExportSettings(handl, &settings);
+	ret = HPS3D_ExportSettings(handle, &settings);
 	if (ret != HPS3D_RET_OK)
 	{
 		printf("Failed to export device parameters,Err:%d\n", ret);
 		return;
 	}
-	printf("Resolution:%d X %d\n", settings.max_resolution_X, settings.max_resolution_Y);
-	printf("Optical path compensation turned on: %d\n\n", settings.optical_path_calibration);
-	bool isContinuous = false;
+	//printf("Resolution:%d X %d\n", settings.max_resolution_X, settings.max_resolution_Y);
+	//printf("Optical path compensation turned on: %d\n\n", settings.optical_path_calibration);
 
 	Points.Empty();
 	//printf("Select measurement mode: Single measurement(1) Continuous measurement(2) Exit(Other)\n");
@@ -436,8 +428,8 @@ void FOpen3DUE5Module::GetSensorOneFrame(TArray<FVector>& Points)
 	{
 		//Single measurement mode
 		HPS3D_EventType_t type = HPS3D_NULL_EVEN;
-		printf("%d\n", handl);
-		ret = HPS3D_SingleCapture(handl, &type, &g_measureData);
+		printf("%d\n", handle);
+		ret = HPS3D_SingleCapture(handle, &type, &g_measureData);
 		if (ret != HPS3D_RET_OK)
 		{
 			printf("Single measurement failed,Err:%d\n", ret);
@@ -463,24 +455,10 @@ void FOpen3DUE5Module::GetSensorOneFrame(TArray<FVector>& Points)
 		UE_LOG(LogTemp, Warning, TEXT("%2d "), g_measureData.full_depth_data.point_cloud_data.point_data[400].z);
 		UE_LOG(LogTemp, Warning, TEXT("%2d "), g_measureData.full_depth_data.point_cloud_data.point_data[500].z);
 	}
-	else
-	{
-		isContinuous = false;
-		return;
-	}
 
-if (isContinuous)
-{
-	while (1)
-	{
-		Sleep(10);
-	}
-}
-
-HPS3D_StopCapture(handl);
-HPS3D_CloseDevice(handl);
+HPS3D_StopCapture(handle);
+HPS3D_CloseDevice(handle);
 HPS3D_MeasureDataFree(&g_measureData);
-system("pause");
 }
 
 #undef LOCTEXT_NAMESPACE

@@ -47,7 +47,8 @@ private:
 		"Binaries/ThirdParty/CS20/bin/opencv_imgproc440.dll",
 		"Binaries/ThirdParty/CS20/bin/opencv_videoio440.dll",
 		"Binaries/ThirdParty/CS20/bin/pthreadVC2.dll",
-		"Binaries/ThirdParty/CS20/bin/SonixCamera.dll"
+		"Binaries/ThirdParty/CS20/bin/SonixCamera.dll",
+		"Binaries/ThirdParty/HPS3D/bin/HPS3D160_SDK.dll"
 	};
 
 	/** Handle to the dll we will load */
