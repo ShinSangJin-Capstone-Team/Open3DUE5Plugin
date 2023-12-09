@@ -185,7 +185,9 @@ public:
     /// clipped.
     ///
     /// \param bbox AxisAlignedBoundingBox to crop points.
-    std::shared_ptr<PointCloud> Crop(const AxisAlignedBoundingBox &bbox) const;
+    /// \param invert Optional boolean to invert cropping.
+    std::shared_ptr<PointCloud> Crop(const AxisAlignedBoundingBox &bbox,
+                                     bool invert = false) const;
 
     /// \brief Function to crop pointcloud into output pointcloud
     ///
@@ -193,7 +195,9 @@ public:
     /// clipped.
     ///
     /// \param bbox OrientedBoundingBox to crop points.
-    std::shared_ptr<PointCloud> Crop(const OrientedBoundingBox &bbox) const;
+    /// \param invert Optional boolean to invert cropping.
+    std::shared_ptr<PointCloud> Crop(const OrientedBoundingBox &bbox,
+                                     bool invert = false) const;
 
     /// \brief Function to remove points that have less than \p nb_points in a
     /// sphere of a given radius.
@@ -206,6 +210,17 @@ public:
                          double search_radius,
                          bool print_progress = false) const;
 
+    /// \brief Function to remove points that have less than \p nb_points in a
+    /// sphere of a given radius.
+    ///
+    /// \param nb_points Number of points within the radius.
+    /// \param search_radius Radius of the sphere.
+    /// \param print_progress Whether to print the progress bar.
+    std::shared_ptr<PointCloud>
+    RemoveRadiusOutliersJustPtr(size_t nb_points,
+                         double search_radius,
+                         bool print_progress = false) const;
+
     /// \brief Function to remove points that are further away from their
     /// \p nb_neighbor neighbors in average.
     ///
@@ -213,6 +228,16 @@ public:
     /// \param std_ratio Standard deviation ratio.
     std::tuple<std::shared_ptr<PointCloud>, std::vector<size_t>>
     RemoveStatisticalOutliers(size_t nb_neighbors,
+                              double std_ratio,
+                              bool print_progress = false) const;
+
+    /// \brief Function to remove points that are further away from their
+    /// \p nb_neighbor neighbors in average.
+    ///
+    /// \param nb_neighbors Number of neighbors around the target point.
+    /// \param std_ratio Standard deviation ratio.
+    std::shared_ptr<PointCloud>
+    RemoveStatisticalOutliersJustPtr(size_t nb_neighbors,
                               double std_ratio,
                               bool print_progress = false) const;
 
@@ -248,10 +273,18 @@ public:
     /// \brief Function to consistently orient estimated normals based on
     /// consistent tangent planes as described in Hoppe et al., "Surface
     /// Reconstruction from Unorganized Points", 1992.
+    /// Further details on parameters are described in
+    /// Piazza, Valentini, Varetti, "Mesh Reconstruction from Point Cloud",
+    /// 2023.
     ///
     /// \param k k nearest neighbour for graph reconstruction for normal
     /// propagation.
-    void OrientNormalsConsistentTangentPlane(size_t k);
+    /// \param lambda penalty constant on the distance of a point from the
+    /// tangent plane \param cos_alpha_tol treshold that defines the amplitude
+    /// of the cone spanned by the reference normal
+    void OrientNormalsConsistentTangentPlane(size_t k,
+                                             const double lambda = 0.0,
+                                             const double cos_alpha_tol = 1.0);
 
     /// \brief Function to compute the point to point distances between point
     /// clouds.

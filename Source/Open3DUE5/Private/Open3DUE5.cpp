@@ -69,68 +69,11 @@ THIRD_PARTY_INCLUDES_END
 //preallocate memory
 static HPS3D_MeasureData_t g_measureData;
 
-
-
-void Render(sy3::depth_frame* piexls_depth, sy3::frame* piexls_rgb, int width, int height)
+namespace CS20Things
 {
-	std::cout << width << std::endl;
-	std::cout << height << std::endl;
-
-	cv::Mat gray16(piexls_depth->get_height(), piexls_depth->get_width(), CV_16UC1, piexls_depth->get_data());
-	cv::Mat tmp;
-	cv::Mat gray8 = cv::Mat::zeros(gray16.size(), CV_8U);
-	cv::normalize(gray16, tmp, 0, 255, cv::NORM_MINMAX);
-	cv::convertScaleAbs(tmp, gray8);
-	cv::Mat yuvImg(piexls_rgb->get_height(), piexls_rgb->get_width(), CV_8UC3, piexls_rgb->get_data());
-	//RGBD
-	cv::Mat rgbd_img(height, width, CV_8UC3, cv::Scalar(0));// rgb_img;
-	for (int row = 0; row < yuvImg.rows; row++) {
-		for (int col = 0; col < yuvImg.cols; col++)
-		{
-			if (gray16.ptr<uint16_t>(row)[col] > 10)
-			{
-				rgbd_img.ptr<uchar>(row)[col * 3] = yuvImg.ptr<uchar>(row)[col * 3];
-				rgbd_img.ptr<uchar>(row)[col * 3 + 1] = yuvImg.ptr<uchar>(row)[col * 3 + 1];
-				rgbd_img.ptr<uchar>(row)[col * 3 + 2] = yuvImg.ptr<uchar>(row)[col * 3 + 2];
-			}
-		}
-	}
-	cv::namedWindow(RGBD_WINDOW_NAME, cv::WINDOW_NORMAL);
-	cv::resizeWindow(RGBD_WINDOW_NAME, RGB_WIDTH, RGB_HEIGHT);
-	cv::imshow(RGBD_WINDOW_NAME, rgbd_img);
-}
-
-
-void show_depth_frame(sy3::depth_frame* frame, const char* name)
-{
-	if (frame)
-	{
-
-		cv::Mat gray16(frame->get_height(), frame->get_width(), CV_16UC1, frame->get_data());
-		cv::Mat tmp;
-		cv::Mat gray8 = cv::Mat::zeros(gray16.size(), CV_8U);
-		cv::normalize(gray16, tmp, 0, 255, cv::NORM_MINMAX);
-		cv::convertScaleAbs(tmp, gray8);
-		cv::namedWindow(name, cv::WINDOW_NORMAL);
-		cv::imshow(name, gray8);
-
-	}
-}
-
-void show_rgb_rgb_frame(sy3::frame* frame, const char* name)
-{
-	if (frame)
-	{
-
-		cv::Mat yuvImg(frame->get_height(), frame->get_width(), CV_8UC3, frame->get_data());
-		//cv::Mat rgbImg(frame->get_height(), frame->get_width(), CV_8UC3);
-		//	cv::cvtColor(yuvImg, rgbImg, cv::ColorConversionCodes::COLOR_BGR2BGR);
-		cv::namedWindow(name, cv::WINDOW_NORMAL);
-		cv::imshow(name, yuvImg);
-		const sy3::stream_profile* rgb_profile = frame->get_profile();
-		sy3::sy3_intrinsics rgb_inteinics = rgb_profile->get_intrinsics();
-
-	}
+	sy3::context* ctx;
+	sy3::pipeline* pline;
+	sy3::sy3_error e;
 }
 
 void print_device_info(sy3::device* dev)
@@ -147,11 +90,12 @@ void print_device_info(sy3::device* dev)
 void print_support_format(sy3::device* dev, sy3::sy3_error& e)
 {
 
+	/**
 	std::vector<sy3::sy3_stream> support_stream = dev->get_support_stream(e);
 	for (int i = 0; i < support_stream.size(); i++)
 	{
 		UE_LOG(LogTemp, Warning, TEXT("support stream : % s \n"), sy3_stream_to_string(support_stream[i]));
-		printf("support stream:%s \n", sy3_stream_to_string(support_stream[i]));
+		//printf("support stream:%s \n", sy3_stream_to_string(support_stream[i]));
 		std::vector<sy3::sy3_format> support_format = dev->get_support_format(support_stream[i], e);
 		for (int j = 0; j < support_format.size(); j++)
 		{
@@ -159,6 +103,7 @@ void print_support_format(sy3::device* dev, sy3::sy3_error& e)
 			printf("\t\t support format:%d x %d \n", support_format[j].width, support_format[j].height);
 		}
 	}
+	//*/
 }
 
 static void EventCallBackFunc(int handle, int eventType, uint8_t* data, int dataLen, void* userPara)
@@ -229,6 +174,27 @@ void FOpen3DUE5Module::ShutdownModule()
 	//Open3DHandle = nullptr;
 }
 
+void FOpen3DUE5Module::CleanUpRawData(TArray<FVector> InPoints, float VoxelSize, TArray<FVector>& OutPoints)
+{
+	std::vector<Eigen::Vector3d> EigenPoints = {};
+
+	for (auto APoint : InPoints)
+	{
+		EigenPoints.push_back(Eigen::Vector3d(APoint.X, APoint.Y, APoint.Z));
+	}
+
+	auto DownSampled = open3d::geometry::PointCloud(EigenPoints).VoxelDownSample(5.0 * VoxelSize);
+
+	auto StatCleanUp = DownSampled->RemoveStatisticalOutliersJustPtr(8, 1.0);
+	auto RadiusCleanUp = StatCleanUp->RemoveRadiusOutliersJustPtr(3, 10.0 * VoxelSize * FMath::Sqrt(3.0));
+	OutPoints.Empty();
+	for (auto APoint : RadiusCleanUp->points_)
+	{
+		OutPoints.Add(FVector(APoint.x(), APoint.y(), APoint.z()));
+	}
+	//UE_LOG(LogTemp, Warning, TEXT("Outpoints First Value: %s"), *OutPoints[0].ToString());
+}
+
 void FOpen3DUE5Module::VoxelizedArrFromPoints(TArray<FVector3f> InPoints, double VoxelSize, TArray<FIntVector>& OutVoxelizedArr, FIntVector& CalcedRealSize)
 {
 	std::vector<Eigen::Vector3d> EigenPoints = {};
@@ -277,105 +243,110 @@ void FOpen3DUE5Module::VoxelizedArrFromPoints(TArray<FVector3f> InPoints, double
 
 void FOpen3DUE5Module::InitSensorCS20()
 {
-	printf("version:%s \n", sy3::sy3_get_version(e));
-	ctx = sy3::sy3_create_context(e);
-	sy3::device* dev = ctx->query_device(e);
+	UE_LOG(LogTemp, Warning, TEXT("version: % s"), *FString(sy3::sy3_get_version(CS20Things::e)));
 
-	if (e != sy3::sy3_error::SUCCESS) {
-		UE_LOG(LogTemp, Warning, TEXT("error: %d %s \n"), e, sy3::sy3_error_to_string(e));
-		printf("error:%d  %s \n", e, sy3::sy3_error_to_string(e));
+	printf("version:%s \n", sy3::sy3_get_version(CS20Things::e));
+	CS20Things::ctx = sy3::sy3_create_context(CS20Things::e);
+	sy3::device* dev = CS20Things::ctx->query_device(CS20Things::e);
+
+	if (CS20Things::e != sy3::sy3_error::SUCCESS) {
+		UE_LOG(LogTemp, Warning, TEXT("error: %d %s \n"), CS20Things::e, *FString(sy3::sy3_error_to_string(CS20Things::e)));
+		printf("error:%d  %s \n", CS20Things::e, sy3::sy3_error_to_string(CS20Things::e));
 		return;
 	}
 
-	print_support_format(dev, e);
+	print_support_format(dev, CS20Things::e);
 	print_device_info(dev);
 
-	pline = sy3::sy3_create_pipeline(ctx, e);
+	CS20Things::pline = sy3::sy3_create_pipeline(CS20Things::ctx, CS20Things::e);
 
-	sy3::config* cfg = sy3_create_config(ctx, e);
-	cfg->enable_stream(sy3::sy3_stream::SY3_STREAM_DEPTH, DEPTH_WIDTH, DEPTH_HEIGHT, e);
-	cfg->enable_stream(sy3::sy3_stream::SY3_STREAM_RGB, RGB_WIDTH, RGB_HEIGHT, e);
+	sy3::config* cfg = sy3_create_config(CS20Things::ctx, CS20Things::e);
+	cfg->enable_stream(sy3::sy3_stream::SY3_STREAM_DEPTH, DEPTH_WIDTH, DEPTH_HEIGHT, CS20Things::e);
+	cfg->enable_stream(sy3::sy3_stream::SY3_STREAM_RGB, RGB_WIDTH, RGB_HEIGHT, CS20Things::e);
 
-	pline->start(cfg, e);
+	CS20Things::pline->start(cfg, CS20Things::e);
 }
 
 void FOpen3DUE5Module::GetSensorOneFrameCS20(TArray<FVector>& Points)
 {
-	if (!pline)
+	if (!CS20Things::pline)
 	{
-		if (!ctx)
+		if (!CS20Things::ctx)
 		{
-			ctx = sy3::sy3_create_context(e);
-			sy3::device* dev = ctx->query_device(e);
+			CS20Things::ctx = sy3::sy3_create_context(CS20Things::e);
+			sy3::device* dev = CS20Things::ctx->query_device(CS20Things::e);
 
-			if (e != sy3::sy3_error::SUCCESS) {
-				UE_LOG(LogTemp, Warning, TEXT("error: %d %s \n"), e, sy3::sy3_error_to_string(e));
-				printf("error:%d  %s \n", e, sy3::sy3_error_to_string(e));
+			if (CS20Things::e != sy3::sy3_error::SUCCESS) {
+				UE_LOG(LogTemp, Warning, TEXT("error: %d %s \n"), CS20Things::e, *FString(sy3::sy3_error_to_string(CS20Things::e)));
+				printf("error:%d  %s \n", CS20Things::e, sy3::sy3_error_to_string(CS20Things::e));
 				Points.Empty();
 				Points.Add(FVector(-1.0, -1.0, -1.0));
 				return;
 			}
 
-			print_support_format(dev, e);
+			print_support_format(dev, CS20Things::e);
 			print_device_info(dev);
 		}
 
-		pline = sy3::sy3_create_pipeline(ctx, e);
+		CS20Things::pline = sy3::sy3_create_pipeline(CS20Things::ctx, CS20Things::e);
 
-		sy3::config* cfg = sy3_create_config(ctx, e);
-		cfg->enable_stream(sy3::sy3_stream::SY3_STREAM_DEPTH, DEPTH_WIDTH, DEPTH_HEIGHT, e);
-		cfg->enable_stream(sy3::sy3_stream::SY3_STREAM_RGB, RGB_WIDTH, RGB_HEIGHT, e);
+		sy3::config* cfg = sy3_create_config(CS20Things::ctx, CS20Things::e);
+		cfg->enable_stream(sy3::sy3_stream::SY3_STREAM_DEPTH, DEPTH_WIDTH, DEPTH_HEIGHT, CS20Things::e);
+		cfg->enable_stream(sy3::sy3_stream::SY3_STREAM_RGB, RGB_WIDTH, RGB_HEIGHT, CS20Things::e);
 
-		pline->start(cfg, e);
+		CS20Things::pline->start(cfg, CS20Things::e);
 	}
-	else
+	Points.Empty();
+
+	sy3::frameset* frameset = CS20Things::pline->wait_for_frames(SY3_DEFAULT_TIMEOUT, CS20Things::e);
+	sy3::depth_frame* depth_frame = frameset->get_depth_frame();
+	//sy3::rgb_frame* rgb_frame = frameset->get_rgb_frame();
+
+	if (depth_frame)// && rgb_frame)
 	{
-		Points.Empty();
+		/*sy3::sy3_intrinsics intrinsics_tof = depth_frame->get_profile()->get_intrinsics();
+		printf("depth intrinsics: %d x %d  %f %f\n", intrinsics_tof.width, intrinsics_tof.height, intrinsics_tof.fx, intrinsics_tof.fy);
+		sy3::sy3_intrinsics intrinsics_rgb = rgb_frame->get_profile()->get_intrinsics();
+		printf("rgb intrinsics: %d x %d  %f %f\n", intrinsics_rgb.width, intrinsics_rgb.height, intrinsics_rgb.fx, intrinsics_rgb.fy);
 
-		sy3::frameset* frameset = pline->wait_for_frames(SY3_DEFAULT_TIMEOUT, e);
-		sy3::depth_frame* depth_frame = frameset->get_depth_frame();
-		//sy3::rgb_frame* rgb_frame = frameset->get_rgb_frame();
+		show_depth_frame(depth_frame, "depth");*/
 
-		if (depth_frame)// && rgb_frame)
-		{
+		if (depth_frame->get_width() == 640) {
 
+			int align_width = 640;
+			int align_height = 480;
+			sy3::frameset* set = frameset;//pline->get_process_engin(e)->align_to_rgb(depth_frame, rgb_frame, align_width, align_height, e);
+			//show_depth_frame(set->get_depth_frame(), "algin_depth");
 
-			if (depth_frame->get_width() == 640) {
-
-				int align_width = 640;
-				int align_height = 480;
-				sy3::frameset* set = frameset;//pline->get_process_engin(e)->align_to_rgb(depth_frame, rgb_frame, align_width, align_height, e);
-				//show_depth_frame(set->get_depth_frame(), "algin_depth");
-
-				int height = set->get_depth_frame()->get_height();
-				int width = set->get_depth_frame()->get_width();
-				UE_LOG(LogTemp, Warning, TEXT("Height: %d, Width: %d"), height, width);
-				sy3::sy3_error e1;
-				sy3::points* points = pline->get_process_engin(e1)->comptute_points(depth_frame, true, e1);
-				float* data = points->get_points();
-				std::cout << points->get_length() << std::endl;
-
-				for (auto i = 0; i < height; i++)
+			int height = set->get_depth_frame()->get_height();
+			int width = set->get_depth_frame()->get_width();
+			UE_LOG(LogTemp, Warning, TEXT("Height: %d, Width: %d"), height, width);
+			sy3::sy3_error e1;
+			sy3::points* points = CS20Things::pline->get_process_engin(e1)->comptute_points(depth_frame, true, e1);
+			float* data = points->get_points();
+			std::cout << points->get_length() << std::endl;
+			/**/
+			for (auto i = 0; i < height; i++)
+			{
+				for (auto j = 0; j < width; j++)
 				{
-					for (auto j = 0; j < width; j++)
+					auto depth = data[(3 * width) * i + 3 * j + 2];
+					if (200 < depth && depth < 3000)
 					{
-						if (data[(3 * width) * i + 3 * j + 2] > 0)
-						{
-							Points.Add(FVector(
-								data[(3 * width) * i + 3 * j + 0],
-								data[(3 * width) * i + 3 * j + 1],
-								data[(3 * width) * i + 3 * j + 2]
-							));
-						}
-						//printf("%4d ", (int)data[i * (3 * width) + j * (3) + 2]);
+						Points.Add(FVector(
+							data[(3 * width) * i + 3 * j + 0],
+							data[(3 * width) * i + 3 * j + 1],
+							data[(3 * width) * i + 3 * j + 2]
+						));
 					}
+					//printf("%4d ", (int)data[i * (3 * width) + j * (3) + 2]);
 				}
-				delete points;
 			}
+			delete points;
 		}
-
-		delete frameset;
 	}
+
+	delete frameset;
 }
 
 namespace HPSStuff
@@ -405,7 +376,7 @@ void FOpen3DUE5Module::InitSensor()
 	HPSStuff::handle = -1;
 
 	//if you have problem with connection this may be the problem
-	HPSStuff::ret = HPS3D_USBConnectDevice((char*)_T("COM3"), &HPSStuff::handle);
+	HPSStuff::ret = HPS3D_USBConnectDevice((char*)_T("COM5"), &HPSStuff::handle);
 
 	if (HPSStuff::ret != HPS3D_RET_OK)
 	{
@@ -455,20 +426,20 @@ void FOpen3DUE5Module::GetSensorOneFrame(TArray<FVector>& Points)
 		{
 			for (auto j = 0; j < HPSStuff::settings.max_resolution_X; j++)
 			{
-				if (g_measureData.full_depth_data.point_cloud_data.point_data[160 * i + j].z > 100)
+				auto distance = g_measureData.full_depth_data.point_cloud_data.point_data[160 * i + j].z;
+				if (300 < distance && distance < 2000)
 				{
 					Points.Add(FVector(
 						g_measureData.full_depth_data.point_cloud_data.point_data[160 * i + j].x,
 						g_measureData.full_depth_data.point_cloud_data.point_data[160 * i + j].y,
 						g_measureData.full_depth_data.point_cloud_data.point_data[160 * i + j].z
 					));
-					
 				}
 				//printf("%1d", (int)data.full_depth_data.point_cloud_data.point_data[i*160 + j].z/1000);
 			}
 		}
-		UE_LOG(LogTemp, Warning, TEXT("%2f "), g_measureData.full_depth_data.point_cloud_data.point_data[400].z);
-		UE_LOG(LogTemp, Warning, TEXT("%2f "), g_measureData.full_depth_data.point_cloud_data.point_data[500].z);
+		//UE_LOG(LogTemp, Warning, TEXT("%2f "), g_measureData.full_depth_data.point_cloud_data.point_data[400].z);
+		//UE_LOG(LogTemp, Warning, TEXT("%2f "), g_measureData.full_depth_data.point_cloud_data.point_data[500].z);
 	}
 	else
 	{
