@@ -185,8 +185,11 @@ void FOpen3DUE5Module::CleanUpRawData(TArray<FVector> InPoints, float VoxelSize,
 
 	auto DownSampled = open3d::geometry::PointCloud(EigenPoints).VoxelDownSample(5.0 * VoxelSize);
 
-	auto StatCleanUp = DownSampled->RemoveStatisticalOutliersJustPtr(8, 1.0);
-	auto RadiusCleanUp = StatCleanUp->RemoveRadiusOutliersJustPtr(3, 10.0 * VoxelSize * FMath::Sqrt(3.0));
+	auto StatCleanUp = DownSampled->RemoveStatisticalOutliersJustPtr(8, 0.75);
+	auto RadiusCleanUp = StatCleanUp->RemoveRadiusOutliersJustPtr(5, 8.0 * VoxelSize * FMath::Sqrt(3.0));
+	
+	
+	
 	OutPoints.Empty();
 	for (auto APoint : RadiusCleanUp->points_)
 	{
@@ -359,9 +362,11 @@ namespace HPSStuff
 
 void FOpen3DUE5Module::CleanUpSensorHPS()
 {
-
-	HPS3D_StopCapture(HPSStuff::handle);
-	HPS3D_CloseDevice(HPSStuff::handle);
+	if (HPSStuff::handle >= 0)
+	{
+		HPS3D_StopCapture(HPSStuff::handle);
+		HPS3D_CloseDevice(HPSStuff::handle);
+	}
 	HPS3D_MeasureDataFree(&g_measureData);
 }
 
@@ -400,6 +405,68 @@ void FOpen3DUE5Module::InitSensor()
 	}
 }
 
+float averageDepthExcludingOutliers(int x, int y, float tolerance, HPS3D_PerPointCloudData_t** data)
+{
+	float originalDepth = data[x][y].z;
+	auto averageDepth = originalDepth;
+	auto nonOutlierCount = 1;
+	for (auto i = -1; i < 2; ++i)
+	{
+		for (auto j = -1; j < 2; ++j)
+		{
+			if (0 < i && i < HPSStuff::settings.max_resolution_X && 0 < j && j < HPSStuff::settings.max_resolution_Y)
+			{
+				auto pointDepth = data[i + x][j + y].z;
+				if (FMath::Abs(pointDepth - originalDepth) < tolerance)
+				{
+					nonOutlierCount++;
+					averageDepth += pointDepth;
+				}
+			}
+		}
+	}
+
+	averageDepth = averageDepth / nonOutlierCount;
+	return averageDepth;
+}
+
+void averageDepths(HPS3D_PerPointCloudData_t** dataBuffer)
+{
+	auto** tempBuffer = new HPS3D_PerPointCloudData_t * [HPSStuff::settings.max_resolution_Y] {};
+	for (auto i = 0; i < HPSStuff::settings.max_resolution_Y; ++i)
+	{
+		tempBuffer[i] = new HPS3D_PerPointCloudData_t[HPSStuff::settings.max_resolution_X]{};
+	}
+
+	for (auto i = 0; i < HPSStuff::settings.max_resolution_Y; i++)
+	{
+		for (auto j = 0; j < HPSStuff::settings.max_resolution_X; j++)
+		{
+			auto& originalPoint = dataBuffer[i][j];
+			auto originalDepth = originalPoint.z;
+			auto newDepth = averageDepthExcludingOutliers(i, j, 150.0, dataBuffer);
+			tempBuffer[i][j].z = newDepth;
+			tempBuffer[i][j].x = (newDepth / originalDepth) * originalPoint.x;
+			tempBuffer[i][j].y = (newDepth / originalDepth) * originalPoint.y;
+		}
+	}
+
+	for (auto i = 0; i < HPSStuff::settings.max_resolution_Y; i++)
+	{
+		for (auto j = 0; j < HPSStuff::settings.max_resolution_X; j++)
+		{
+			dataBuffer[i][j] = tempBuffer[i][j];
+		}
+	}
+
+	for (auto i = 0; i < HPSStuff::settings.max_resolution_Y; ++i)
+	{
+		delete[] tempBuffer[i];
+	}
+
+	delete[] tempBuffer;
+}
+
 void FOpen3DUE5Module::GetSensorOneFrame(TArray<FVector>& Points)
 {
 	//printf("HPS3D160 C/C++ Demo (Visual Statudio 2019)\n\n");
@@ -422,22 +489,40 @@ void FOpen3DUE5Module::GetSensorOneFrame(TArray<FVector>& Points)
 			return;
 		}
 		//PrintResultData(type, g_measureData);
+
+		auto** dataBuffer = new HPS3D_PerPointCloudData_t *[HPSStuff::settings.max_resolution_Y] {};
+		for (auto i = 0; i < HPSStuff::settings.max_resolution_Y; ++i)
+		{
+			dataBuffer[i] = new HPS3D_PerPointCloudData_t[HPSStuff::settings.max_resolution_X]{};
+		}
+
+		// flatten depths
+		averageDepths(dataBuffer);
+		averageDepths(dataBuffer);
+
 		for (auto i = 0; i < HPSStuff::settings.max_resolution_Y; i++)
 		{
 			for (auto j = 0; j < HPSStuff::settings.max_resolution_X; j++)
 			{
-				auto distance = g_measureData.full_depth_data.point_cloud_data.point_data[160 * i + j].z;
-				if (300 < distance && distance < 2000)
+				auto distance = dataBuffer[i][j].z;
+				if (200 < distance && distance < 3000)
 				{
 					Points.Add(FVector(
-						g_measureData.full_depth_data.point_cloud_data.point_data[160 * i + j].x,
-						g_measureData.full_depth_data.point_cloud_data.point_data[160 * i + j].y,
-						g_measureData.full_depth_data.point_cloud_data.point_data[160 * i + j].z
+						dataBuffer[i][j].x,
+						dataBuffer[i][j].y,
+						dataBuffer[i][j].z
 					));
 				}
 				//printf("%1d", (int)data.full_depth_data.point_cloud_data.point_data[i*160 + j].z/1000);
 			}
 		}
+
+		for (auto i = 0; i < HPSStuff::settings.max_resolution_Y; ++i)
+		{
+			delete[] dataBuffer[i];
+		}
+
+		delete[] dataBuffer;
 		//UE_LOG(LogTemp, Warning, TEXT("%2f "), g_measureData.full_depth_data.point_cloud_data.point_data[400].z);
 		//UE_LOG(LogTemp, Warning, TEXT("%2f "), g_measureData.full_depth_data.point_cloud_data.point_data[500].z);
 	}
