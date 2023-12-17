@@ -384,8 +384,7 @@ void FOpen3DUE5Module::InitSensor()
 
 	printf("Device version:%s\n", HPS3D_GetDeviceVersion(HPSThings::handle));
 	printf("Device serial number:%s\n\n", HPS3D_GetSerialNumber(HPSThings::handle));
-	UE_LOG(LogTemp, Warning, TEXT("Device connection failed here,Err:%d\n"), HPSThings::ret);
-	UE_LOG(LogTemp, Warning, TEXT("Device connection failed here,Err:%d\n"), HPSThings::ret);
+	UE_LOG(LogTemp, Warning, TEXT("Device handle: %d\n"), HPSThings::handle);
 
 	HPSThings::ret = HPS3D_ExportSettings(HPSThings::handle, &HPSThings::settings);
 	if (HPSThings::ret != HPS3D_RET_OK)
