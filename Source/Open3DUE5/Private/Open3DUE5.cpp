@@ -243,8 +243,8 @@ static void EventCallBackFunc(int handle, int eventType, uint8_t* data, int data
 		break;
 	case HPS3D_DISCONNECT_EVEN: /*Connection abnormal disconnection notification event*/
 		printf("Device disconnected!\n");
-		//HPS3D_CloseDevice(handle);
-		//HPS3D_MeasureDataFree(&g_measureData);
+		HPS3D_CloseDevice(handle);
+		HPS3D_MeasureDataFree(&HPSThings::g_measureData);
 		break;
 	case HPS3D_NULL_EVEN:  //Empty event notification
 	default:
@@ -352,6 +352,7 @@ void pinAllDataToFittingPlanes(HPS3D_PerPointCloudData_t** dataBuffer)
 
 void FOpen3DUE5Module::CleanUpSensorHPS()
 {
+	HPS3D_UnregisterEventCallback();
 	if (HPSThings::handle >= 0)
 	{
 		HPS3D_StopCapture(HPSThings::handle);
@@ -401,6 +402,7 @@ void FOpen3DUE5Module::GetSensorOneFrame(TArray<FVector>& Points)
 	bool isContinuous = false;
 
 	Points.Empty();
+
 	//printf("Select measurement mode: Single measurement(1) Continuous measurement(2) Exit(Other)\n");
 	char se = '1';
 	//getchar(); //Filter Carriage Return
@@ -443,7 +445,7 @@ void FOpen3DUE5Module::GetSensorOneFrame(TArray<FVector>& Points)
 			for (auto j = 0; j < HPSThings::settings.max_resolution_X; j++)
 			{
 				auto distance = dataBuffer[i][j].z;
-				if (200 < distance && distance < 3000)
+				if (200 < distance && distance < 2000)
 				{
 					Points.Add(FVector(
 						dataBuffer[i][j].x,
