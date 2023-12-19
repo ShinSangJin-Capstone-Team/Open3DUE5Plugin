@@ -64,8 +64,21 @@ THIRD_PARTY_INCLUDES_END
 #define RGB_WINDOW_NAME "RGB"
 #define TOF_WINDOW_NAME "TOF"
 
+typedef std::basic_string<TCHAR> tstring;
 //HPS3D start
 
+TCHAR* StringToTCHAR(std::string& s) 
+{ 
+	size_t cn;
+	//tstring tstr;
+	const char* all = s.c_str();
+	int len = 1 + strlen(all);
+	wchar_t* t = new wchar_t[len]; 
+	if (NULL == t) throw std::bad_alloc();
+	//mbstowcs(t, all, len);
+	mbstowcs_s(&cn, t, len, all, len - 1);
+	return (TCHAR*)t;
+}
 
 
 #pragma region CS20
@@ -371,8 +384,31 @@ void FOpen3DUE5Module::InitSensor()
 
 	HPSThings::handle = -1;
 
-	//if you have problem with connection this may be the problem
-	HPSThings::ret = HPS3D_USBConnectDevice((char*)_T("COM5"), &HPSThings::handle);
+	//HPSThings::ret = HPS3D_USBConnectDevice((char*)_T("\\\\.\\COM23"), &HPSThings::handle);
+
+	
+	for (int i = 1; i < 10; ++i)
+	{
+		//if you have problem with connection this may be the problem
+		auto portNameString = std::string("COM") + std::to_string(i);
+
+		HPSThings::ret = HPS3D_USBConnectDevice((char*)StringToTCHAR(portNameString), &HPSThings::handle);
+
+		if (HPSThings::ret != HPS3D_RET_OK) continue;
+		else break;
+	}
+	if (HPSThings::ret != HPS3D_RET_OK)
+	{
+		for (int i = 10; i < 127; ++i)
+		{
+			//if you have problem with connection this may be the problem
+			auto portNameString = std::string("\\\\.\\COM") + std::to_string(i);
+			HPSThings::ret = HPS3D_USBConnectDevice((char*)StringToTCHAR(portNameString), &HPSThings::handle);
+
+			if (HPSThings::ret != HPS3D_RET_OK) continue;
+			else break;
+		}
+	}
 
 	if (HPSThings::ret != HPS3D_RET_OK)
 	{
