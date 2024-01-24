@@ -10,15 +10,12 @@
 #if PLATFORM_WINDOWS
 #include "Windows/AllowWindowsPlatformTypes.h"
 #include "Windows/WindowsHWrapper.h"
-#endif
-//*/
+
 #include <iostream>
 #include <vector>
 #include <memory>
-#include <tchar.h>
 
-/**/
-#if PLATFORM_WINDOWS
+#include <tchar.h>
 #include "Windows/HideWindowsPlatformTypes.h"
 #endif
 //*/
@@ -26,12 +23,9 @@
 THIRD_PARTY_INCLUDES_START
 #pragma push_macro("check")   // store 'check' macro current definition
 #undef check  // undef to avoid conflicts
-#include "open3d/Open3D.h"
-#include "libsynexens3/libsynexens3.h"
-#include "opencv.hpp"
-#include "imgproc/imgproc.hpp"
-#include "HPS3DUser_IF.h"
-#include "HPS3DUser_IF.c"
+//#include "open3d/Open3D.h"
+//#include "HPS3DUser_IF.h"
+//#include "HPS3DUser_IF.c"
 #pragma pop_macro("check")  // restore definition
 THIRD_PARTY_INCLUDES_END
 
@@ -64,6 +58,7 @@ THIRD_PARTY_INCLUDES_END
 #define RGB_WINDOW_NAME "RGB"
 #define TOF_WINDOW_NAME "TOF"
 
+#if PLATFORM_WINDOWS
 typedef std::basic_string<TCHAR> tstring;
 //HPS3D start
 
@@ -79,156 +74,9 @@ TCHAR* StringToTCHAR(std::string& s)
 	mbstowcs_s(&cn, t, len, all, len - 1);
 	return (TCHAR*)t;
 }
+#endif
 
-
-#pragma region CS20
-namespace CS20Things
-{
-	sy3::context* ctx;
-	sy3::pipeline* pline;
-	sy3::sy3_error e;
-}
-
-void print_device_info(sy3::device* dev)
-{
-	sy3::sy3_error e;
-	printf("\nUsing device 0, an %s\n", sy3::sy3_get_device_info(dev, sy3::SY3_CAMERA_INFO_NAME, e));
-	printf("    Serial number: %s\n", sy3::sy3_get_device_info(dev, sy3::SY3_CAMERA_INFO_SERIAL_NUMBER, e));
-	printf("    Firmware version: %s\n\n", sy3::sy3_get_device_info(dev, sy3::SY3_CAMERA_INFO_FIRMWARE_VERSION, e));
-	UE_LOG(LogTemp, Warning, TEXT("\nUsing device 0, an %s\n"), sy3::sy3_get_device_info(dev, sy3::SY3_CAMERA_INFO_NAME, e));
-	UE_LOG(LogTemp, Warning, TEXT("    Serial number: %s\n"), sy3::sy3_get_device_info(dev, sy3::SY3_CAMERA_INFO_SERIAL_NUMBER, e));
-	UE_LOG(LogTemp, Warning, TEXT("    Firmware version: %s\n\n"), sy3::sy3_get_device_info(dev, sy3::SY3_CAMERA_INFO_FIRMWARE_VERSION, e));
-}
-
-void print_support_format(sy3::device* dev, sy3::sy3_error& e)
-{
-
-	/**
-	std::vector<sy3::sy3_stream> support_stream = dev->get_support_stream(e);
-	for (int i = 0; i < support_stream.size(); i++)
-	{
-		UE_LOG(LogTemp, Warning, TEXT("support stream : % s \n"), sy3_stream_to_string(support_stream[i]));
-		//printf("support stream:%s \n", sy3_stream_to_string(support_stream[i]));
-		std::vector<sy3::sy3_format> support_format = dev->get_support_format(support_stream[i], e);
-		for (int j = 0; j < support_format.size(); j++)
-		{
-			UE_LOG(LogTemp, Warning, TEXT("\t\t support format:%d x %d \n"), support_format[j].width, support_format[j].height);
-			printf("\t\t support format:%d x %d \n", support_format[j].width, support_format[j].height);
-		}
-	}
-	//*/
-}
-
-void FOpen3DUE5Module::InitSensorCS20()
-{
-	UE_LOG(LogTemp, Warning, TEXT("version: % s"), *FString(sy3::sy3_get_version(CS20Things::e)));
-
-	printf("version:%s \n", sy3::sy3_get_version(CS20Things::e));
-	CS20Things::ctx = sy3::sy3_create_context(CS20Things::e);
-	sy3::device* dev = CS20Things::ctx->query_device(CS20Things::e);
-
-	if (CS20Things::e != sy3::sy3_error::SUCCESS) {
-		UE_LOG(LogTemp, Warning, TEXT("error: %d %s \n"), CS20Things::e, *FString(sy3::sy3_error_to_string(CS20Things::e)));
-		printf("error:%d  %s \n", CS20Things::e, sy3::sy3_error_to_string(CS20Things::e));
-		return;
-	}
-
-	print_support_format(dev, CS20Things::e);
-	print_device_info(dev);
-
-	CS20Things::pline = sy3::sy3_create_pipeline(CS20Things::ctx, CS20Things::e);
-
-	sy3::config* cfg = sy3_create_config(CS20Things::ctx, CS20Things::e);
-	cfg->enable_stream(sy3::sy3_stream::SY3_STREAM_DEPTH, DEPTH_WIDTH, DEPTH_HEIGHT, CS20Things::e);
-	cfg->enable_stream(sy3::sy3_stream::SY3_STREAM_RGB, RGB_WIDTH, RGB_HEIGHT, CS20Things::e);
-
-	CS20Things::pline->start(cfg, CS20Things::e);
-}
-
-void FOpen3DUE5Module::GetSensorOneFrameCS20(TArray<FVector>& Points)
-{
-	if (!CS20Things::pline)
-	{
-		if (!CS20Things::ctx)
-		{
-			CS20Things::ctx = sy3::sy3_create_context(CS20Things::e);
-			sy3::device* dev = CS20Things::ctx->query_device(CS20Things::e);
-
-			if (CS20Things::e != sy3::sy3_error::SUCCESS) {
-				UE_LOG(LogTemp, Warning, TEXT("error: %d %s \n"), CS20Things::e, *FString(sy3::sy3_error_to_string(CS20Things::e)));
-				printf("error:%d  %s \n", CS20Things::e, sy3::sy3_error_to_string(CS20Things::e));
-				Points.Empty();
-				Points.Add(FVector(-1.0, -1.0, -1.0));
-				return;
-			}
-
-			print_support_format(dev, CS20Things::e);
-			print_device_info(dev);
-		}
-
-		CS20Things::pline = sy3::sy3_create_pipeline(CS20Things::ctx, CS20Things::e);
-
-		sy3::config* cfg = sy3_create_config(CS20Things::ctx, CS20Things::e);
-		cfg->enable_stream(sy3::sy3_stream::SY3_STREAM_DEPTH, DEPTH_WIDTH, DEPTH_HEIGHT, CS20Things::e);
-		cfg->enable_stream(sy3::sy3_stream::SY3_STREAM_RGB, RGB_WIDTH, RGB_HEIGHT, CS20Things::e);
-
-		CS20Things::pline->start(cfg, CS20Things::e);
-	}
-	Points.Empty();
-
-	sy3::frameset* frameset = CS20Things::pline->wait_for_frames(SY3_DEFAULT_TIMEOUT, CS20Things::e);
-	sy3::depth_frame* depth_frame = frameset->get_depth_frame();
-	//sy3::rgb_frame* rgb_frame = frameset->get_rgb_frame();
-
-	if (depth_frame)// && rgb_frame)
-	{
-		/*sy3::sy3_intrinsics intrinsics_tof = depth_frame->get_profile()->get_intrinsics();
-		printf("depth intrinsics: %d x %d  %f %f\n", intrinsics_tof.width, intrinsics_tof.height, intrinsics_tof.fx, intrinsics_tof.fy);
-		sy3::sy3_intrinsics intrinsics_rgb = rgb_frame->get_profile()->get_intrinsics();
-		printf("rgb intrinsics: %d x %d  %f %f\n", intrinsics_rgb.width, intrinsics_rgb.height, intrinsics_rgb.fx, intrinsics_rgb.fy);
-
-		show_depth_frame(depth_frame, "depth");*/
-
-		if (depth_frame->get_width() == 640) {
-
-			int align_width = 640;
-			int align_height = 480;
-			sy3::frameset* set = frameset;//pline->get_process_engin(e)->align_to_rgb(depth_frame, rgb_frame, align_width, align_height, e);
-			//show_depth_frame(set->get_depth_frame(), "algin_depth");
-
-			int height = set->get_depth_frame()->get_height();
-			int width = set->get_depth_frame()->get_width();
-			UE_LOG(LogTemp, Warning, TEXT("Height: %d, Width: %d"), height, width);
-			sy3::sy3_error e1;
-			sy3::points* points = CS20Things::pline->get_process_engin(e1)->comptute_points(depth_frame, true, e1);
-			float* data = points->get_points();
-			std::cout << points->get_length() << std::endl;
-			/**/
-			for (auto i = 0; i < height; i++)
-			{
-				for (auto j = 0; j < width; j++)
-				{
-					auto depth = data[(3 * width) * i + 3 * j + 2];
-					if (200 < depth && depth < 3000)
-					{
-						Points.Add(FVector(
-							data[(3 * width) * i + 3 * j + 0],
-							data[(3 * width) * i + 3 * j + 1],
-							data[(3 * width) * i + 3 * j + 2]
-						));
-					}
-					//printf("%4d ", (int)data[i * (3 * width) + j * (3) + 2]);
-				}
-			}
-			delete points;
-		}
-	}
-
-	delete frameset;
-}
-
-#pragma endregion
-
+/**
 #pragma region HPS
 namespace HPSThings
 {
@@ -237,32 +85,6 @@ namespace HPSThings
 	HPS3D_DeviceSettings_t settings;
 
 	static HPS3D_MeasureData_t g_measureData;
-}
-
-static void EventCallBackFunc(int handle, int eventType, uint8_t* data, int dataLen, void* userPara)
-{
-	switch ((HPS3D_EventType_t)eventType)
-	{
-		//Measurement data notification event
-	case HPS3D_SIMPLE_ROI_EVEN:
-	case HPS3D_FULL_ROI_EVEN:
-	case HPS3D_FULL_DEPTH_EVEN:
-	case HPS3D_SIMPLE_DEPTH_EVEN:
-		HPS3D_ConvertToMeasureData(data, &HPSThings::g_measureData, (HPS3D_EventType_t)eventType);
-		//PrintResultData((HPS3D_EventType_t)eventType, g_measureData);
-		break;
-	case HPS3D_SYS_EXCEPTION_EVEN: /*System anomaly notification event*/
-		printf("SYS ERR :%s\n", data);
-		break;
-	case HPS3D_DISCONNECT_EVEN: /*Connection abnormal disconnection notification event*/
-		printf("Device disconnected!\n");
-		HPS3D_CloseDevice(handle);
-		HPS3D_MeasureDataFree(&HPSThings::g_measureData);
-		break;
-	case HPS3D_NULL_EVEN:  //Empty event notification
-	default:
-		break;
-	}
 }
 
 static std::string toString(const Eigen::MatrixXd& mat) {
@@ -303,7 +125,7 @@ FVector pinPointToFittingPlane(int x, int y, float tolerance, HPS3D_PerPointClou
 		Eigen::Vector3d NormedPoint = APoint - PointMean;
 		PointsToFormPlaneCentroid.push_back(NormedPoint);
 	}
-	
+
 	auto Matrix = Eigen::Matrix3Xd(3, PointsToFormPlaneCentroid.size());
 
 	for (auto i = 0; i < PointsToFormPlaneCentroid.size(); ++i)
@@ -363,8 +185,35 @@ void pinAllDataToFittingPlanes(HPS3D_PerPointCloudData_t** dataBuffer)
 	delete[] tempBuffer;
 }
 
+static void EventCallBackFunc(int handle, int eventType, uint8_t* data, int dataLen, void* userPara)
+{
+	switch ((HPS3D_EventType_t)eventType)
+	{
+		//Measurement data notification event
+	case HPS3D_SIMPLE_ROI_EVEN:
+	case HPS3D_FULL_ROI_EVEN:
+	case HPS3D_FULL_DEPTH_EVEN:
+	case HPS3D_SIMPLE_DEPTH_EVEN:
+		HPS3D_ConvertToMeasureData(data, &HPSThings::g_measureData, (HPS3D_EventType_t)eventType);
+		//PrintResultData((HPS3D_EventType_t)eventType, g_measureData);
+		break;
+	case HPS3D_SYS_EXCEPTION_EVEN: //System anomaly notification event
+		printf("SYS ERR :%s\n", data);
+		break;
+	case HPS3D_DISCONNECT_EVEN: //Connection abnormal disconnection notification event
+		printf("Device disconnected!\n");
+		HPS3D_CloseDevice(handle);
+		HPS3D_MeasureDataFree(&HPSThings::g_measureData);
+		break;
+	case HPS3D_NULL_EVEN:  //Empty event notification
+	default:
+		break;
+	}
+}
+//*/
 void FOpen3DUE5Module::CleanUpSensorHPS()
 {
+	/**
 	HPS3D_UnregisterEventCallback();
 	if (HPSThings::handle >= 0)
 	{
@@ -372,10 +221,12 @@ void FOpen3DUE5Module::CleanUpSensorHPS()
 		HPS3D_CloseDevice(HPSThings::handle);
 	}
 	HPS3D_MeasureDataFree(&HPSThings::g_measureData);
+	//*/
 }
 
 void FOpen3DUE5Module::InitSensor()
 {
+	/**
 	UE_LOG(LogTemp, Warning, TEXT("HPS3D160 C/C++ Demo (Visual Statudio 2017)\n\n"));
 	UE_LOG(LogTemp, Warning, TEXT("SDK Ver:%s\n"), HPS3D_GetSDKVersion());
 
@@ -429,7 +280,9 @@ void FOpen3DUE5Module::InitSensor()
 		//printf("Failed to export device parameters,Err:%d\n", ret);
 		return;
 	}
+	//*/
 }
+//*/
 
 void FOpen3DUE5Module::GetSensorOneFrame(TArray<FVector>& Points)
 {
@@ -439,6 +292,7 @@ void FOpen3DUE5Module::GetSensorOneFrame(TArray<FVector>& Points)
 
 	Points.Empty();
 
+	/**
 	//printf("Select measurement mode: Single measurement(1) Continuous measurement(2) Exit(Other)\n");
 	char se = '1';
 	//getchar(); //Filter Carriage Return
@@ -507,6 +361,8 @@ void FOpen3DUE5Module::GetSensorOneFrame(TArray<FVector>& Points)
 		isContinuous = false;
 		return;
 	}
+	//*/
+	return;
 }
 #pragma endregion
 
@@ -539,7 +395,7 @@ void FOpen3DUE5Module::ShutdownModule()
 	// we call this function before unloading the module.
 
 	// Free the dll handle
-
+#if PLATFORM_WINDOWS
 	for (auto& Handle : DLLHandles)
 	{
 		FPlatformProcess::FreeDllHandle(Handle);
@@ -547,13 +403,14 @@ void FOpen3DUE5Module::ShutdownModule()
 	}
 
 	DLLHandles.Empty();
-
+#endif
 	//FPlatformProcess::FreeDllHandle(Open3DHandle);
 	//Open3DHandle = nullptr;
 }
 
 void FOpen3DUE5Module::CleanUpRawData(TArray<FVector> InPoints, float VoxelSize, TArray<FVector>& OutPoints)
 {
+	/**
 	std::vector<Eigen::Vector3d> EigenPoints = {};
 
 	for (auto APoint : InPoints)
@@ -572,10 +429,12 @@ void FOpen3DUE5Module::CleanUpRawData(TArray<FVector> InPoints, float VoxelSize,
 		OutPoints.Add(FVector(APoint.x(), APoint.y(), APoint.z()));
 	}
 	//UE_LOG(LogTemp, Warning, TEXT("Outpoints First Value: %s"), *OutPoints[0].ToString());
+	//*/
 }
 
 void FOpen3DUE5Module::VoxelizedArrFromPoints(TArray<FVector3f> InPoints, double VoxelSize, TArray<FIntVector>& OutVoxelizedArr, FIntVector& CalcedRealSize)
 {
+	/**
 	std::vector<Eigen::Vector3d> EigenPoints = {};
 
 	for (auto APoint : InPoints)
@@ -618,6 +477,7 @@ void FOpen3DUE5Module::VoxelizedArrFromPoints(TArray<FVector3f> InPoints, double
 
 		CalcedRealSize = RealSize;
 	}
+	//*/
 }
 
 #undef LOCTEXT_NAMESPACE
