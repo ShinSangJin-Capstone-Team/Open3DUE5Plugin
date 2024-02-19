@@ -27,7 +27,7 @@ public:
 	static void VoxelizedArrFromPoints(TArray<FVector3f> InPoints, double VoxelSize, TArray<FIntVector>& OutVoxelizedArr, FIntVector& CalcedRealSize);
 
 	void CleanUpSensorHPS();
-	void InitSensor();
+	bool InitSensor();
 	void GetSensorOneFrame(TArray<FVector>& Points);
 
 	void InitSensorCS20();

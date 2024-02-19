@@ -374,7 +374,7 @@ void FOpen3DUE5Module::CleanUpSensorHPS()
 	HPS3D_MeasureDataFree(&HPSThings::g_measureData);
 }
 
-void FOpen3DUE5Module::InitSensor()
+bool FOpen3DUE5Module::InitSensor()
 {
 	UE_LOG(LogTemp, Warning, TEXT("HPS3D160 C/C++ Demo (Visual Statudio 2017)\n\n"));
 	UE_LOG(LogTemp, Warning, TEXT("SDK Ver:%s\n"), HPS3D_GetSDKVersion());
@@ -414,7 +414,7 @@ void FOpen3DUE5Module::InitSensor()
 	{
 		//printf("Device connection failed here,Err:%d\n", ret);
 		UE_LOG(LogTemp, Warning, TEXT("Device connection failed here,Err:%d\n"), HPSThings::ret);
-		return;
+		return false;
 	}
 	//Register event callback function for receiving continuous data packets and handling exceptions
 	HPS3D_RegisterEventCallback(EventCallBackFunc, NULL);
@@ -427,8 +427,9 @@ void FOpen3DUE5Module::InitSensor()
 	if (HPSThings::ret != HPS3D_RET_OK)
 	{
 		//printf("Failed to export device parameters,Err:%d\n", ret);
-		return;
+		return false;
 	}
+	return true;
 }
 
 void FOpen3DUE5Module::GetSensorOneFrame(TArray<FVector>& Points)
