@@ -17,3 +17,4 @@
 /Source/ThirdParty/Open3D/lib/* filter=lfs diff=lfs merge=lfs -text
 /Source/ThirdParty/Open3D/bin/Open3D.dll filter=lfs diff=lfs merge=lfs -text
 *.dll filter=lfs diff=lfs merge=lfs -text
+*.pdb filter=lfs diff=lfs merge=lfs -text
